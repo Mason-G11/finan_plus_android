@@ -15,7 +15,7 @@ Mescla do trabalho feito no repositório de desenvolvimento ([finan_plus_android
 - **Shared expenses:** split a bill with friends or family, see who owes whom, record partial payments and send a PDF statement via WhatsApp.
 - **Carry the balance over between months (optional):** in Transactions, each month can show the balance coming from previous months.
 - **Glass effect (optional):** translucent cards over soft glows, on every screen and every theme.
-- Plus an updated welcome tour and a fix for the List/Calendar switch. The app interface is in Brazilian Portuguese.
+- Plus an updated welcome tour and small visual fixes (List/Calendar switch, spacing in upcoming bills). The app interface is in Brazilian Portuguese.
 
 ### Despesas compartilhadas
 
@@ -45,6 +45,7 @@ Mescla do trabalho feito no repositório de desenvolvimento ([finan_plus_android
 
 ### Correções
 
+- **Início:** os cartões de "Próximos vencimentos" ficavam colados um no outro. Agora têm espaço entre eles.
 - **Lançamentos:** ao tocar nos botões Lista/Calendário no topo, o efeito de toque aparecia como um quadrado. Agora acompanha o formato arredondado do botão.
 
 ### Finan+ web e Linux
