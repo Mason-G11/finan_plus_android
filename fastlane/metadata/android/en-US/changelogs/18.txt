@@ -1,0 +1,1 @@
+Transactions: goal reserves now show as "saved" (no minus sign, out of the daily total, with an "in goals" line) and search became a magnifier button. Shared expenses as a branded Finan+ image. With carry-over balance on, Summary and PDF show what comes from previous months. Collapsible sections in My money and visual fixes.
