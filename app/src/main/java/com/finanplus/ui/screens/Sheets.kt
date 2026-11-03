@@ -70,7 +70,7 @@ import com.finanplus.ui.theme.Fin
 import java.time.LocalDate
 
 /** Aplica a operação: sucesso fecha a folha, erro mostra a mensagem e mantém o formulário. */
-private fun apply(o: Outcome, dialogs: Dialogs, close: () -> Unit) {
+internal fun apply(o: Outcome, dialogs: Dialogs, close: () -> Unit) {
     val err = Repo.commit(o)
     if (err == null) close() else dialogs.notice(err.title, err.message)
 }
@@ -104,7 +104,14 @@ fun SheetHost(s: AppState, sheet: Sheet, onClose: () -> Unit) {
                 is Sheet.RecurringEdit -> RecurringEditor(s, sheet.id, onClose)
                 is Sheet.LimitEdit -> LimitEditor(s, sheet.category, onClose)
                 is Sheet.PayInvoice -> PayInvoiceEditor(s, sheet.cardId, onClose)
+                is Sheet.CardDetail -> CardDetailSheet(s, sheet.id, onClose)
+                Sheet.GoalsList -> GoalsListSheet(s)
+                Sheet.LimitsList -> LimitsListSheet(s)
                 is Sheet.Assistant -> AssistantSheet(s, onClose)
+                Sheet.ForecastInfo -> ForecastInfoSheet(s)
+                Sheet.SummaryInfo -> SummaryInfoSheet()
+                is Sheet.AllCategories -> AllCategoriesSheet(s, sheet.from, sheet.to)
+                is Sheet.MonthDetail -> MonthDetailSheet(s, java.time.YearMonth.of(sheet.year, sheet.month), onClose)
                 is Sheet.ReportPdf -> ReportExportSheet(s, sheet.from, sheet.to, onClose)
                 is Sheet.MovesFilters -> MovesFiltersSheet(s, onClose)
                 is Sheet.Simulator -> SimulatorSheet(s, sheet, onClose)
@@ -154,14 +161,14 @@ private fun AddChoiceRow(title: String, description: String, icon: com.finanplus
 }
 
 @Composable
-private fun Header(title: String, subtitle: String) {
+internal fun Header(title: String, subtitle: String) {
     Text(title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
     if (subtitle.isNotEmpty()) Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = Fin.c.muted)
     Spacer(Modifier.height(12.dp))
 }
 
 @Composable
-private fun DeleteButton(label: String, onClick: () -> Unit) {
+internal fun DeleteButton(label: String, onClick: () -> Unit) {
     Spacer(Modifier.height(8.dp))
     PrimaryButton(label, danger = true, onClick = onClick)
 }
@@ -182,7 +189,7 @@ private fun Segmented(options: List<Pair<Kind, String>>, selected: Kind, onSelec
 }
 
 @Composable
-private fun CheckRow(text: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+internal fun CheckRow(text: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).toggleable(value = checked, role = Role.Checkbox, onValueChange = onChange).padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -338,7 +345,7 @@ private fun TxEditor(s: AppState, sheet: Sheet.TxEdit, close: () -> Unit) {
 }
 
 @Composable
-private fun PaymentStatusChoice(label: String, selected: Boolean, onSelect: () -> Unit) {
+internal fun PaymentStatusChoice(label: String, selected: Boolean, onSelect: () -> Unit) {
     Row(
         Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
