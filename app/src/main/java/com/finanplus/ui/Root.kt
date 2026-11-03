@@ -126,8 +126,21 @@ sealed interface Sheet : java.io.Serializable {
     data class RecurringEdit(val id: String? = null) : Sheet
     data class LimitEdit(val category: String? = null) : Sheet
     data class PayInvoice(val cardId: String) : Sheet
+    /** Meu dinheiro: detalhe do cartão (fatura, compras, histórico e editar) */
+    data class CardDetail(val id: String) : Sheet
+    /** Meu dinheiro › Planejamento: lista de metas e lista de limites mensais */
+    data object GoalsList : Sheet
+    data object LimitsList : Sheet
     /** assistente: perguntas, resumo e todas as dicas */
     data object Assistant : Sheet
+    /** Início: como o saldo previsto do fim do mês é calculado */
+    data object ForecastInfo : Sheet
+    /** Resumo: o que entra neste resumo (botão "info" do cabeçalho) */
+    data object SummaryInfo : Sheet
+    /** Resumo: todas as categorias de despesa do período (toque em "Outras") */
+    data class AllCategories(val from: java.time.LocalDate?, val to: java.time.LocalDate?) : Sheet
+    /** Resumo › Evolução: detalhe de um mês (receitas, despesas, metas) */
+    data class MonthDetail(val year: Int, val month: Int) : Sheet
     /** exportar relatório em PDF (período inicial opcional) */
     data class ReportPdf(val from: java.time.LocalDate? = null, val to: java.time.LocalDate? = null) : Sheet
     /** Lançamentos › Lista: período livre e situação (o ícone de ajuste ao lado do mês) */
@@ -195,7 +208,9 @@ class Nav {
 }
 
 val LocalNav = staticCompositionLocalOf { Nav() }
-private val LocalTxSnackbar = staticCompositionLocalOf { SnackbarHostState() }
+internal val LocalTxSnackbar = staticCompositionLocalOf { SnackbarHostState() }
+/** Escopo que vive tanto quanto a tela principal: o snackbar de "Despesa salva" sobrevive ao fechar o formulário. */
+internal val LocalUiScope = staticCompositionLocalOf<kotlinx.coroutines.CoroutineScope?> { null }
 
 /** Padding inferior para o conteúdo não ficar sob a navegação e a ação flutuante. */
 @Composable
@@ -265,6 +280,7 @@ private fun MainScaffold(s: AppState, dev: DeviceSettings, activity: MainActivit
     // Android 13+: pede a permissão de notificação na primeira abertura (uma vez só).
     val ctx = LocalContext.current
     val txSnackbarState = remember { SnackbarHostState() }
+    val uiScope = rememberCoroutineScope()
     val prefs = DevicePrefs.get(ctx)
     val askNotif = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> prefs.update { it.copy(notifications = granted) } }
     LaunchedEffect(Unit) {
@@ -310,6 +326,7 @@ private fun MainScaffold(s: AppState, dev: DeviceSettings, activity: MainActivit
     CompositionLocalProvider(
         LocalNav provides nav,
         LocalTxSnackbar provides txSnackbarState,
+        LocalUiScope provides uiScope,
         com.finanplus.ui.components.LocalToday provides today,
     ) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
@@ -348,8 +365,10 @@ private fun MainScaffold(s: AppState, dev: DeviceSettings, activity: MainActivit
                     .padding(start = 12.dp, end = 82.dp, bottom = 116.dp).widthIn(max = 360.dp),
             )
             SaveErrorBanner(Modifier.align(Alignment.TopCenter)) { reaskProblem++ }
+            // Receita e Despesa (novo e editar): tela cheia por cima de tudo (LANCAMENTO-NOVA-TELA.md)
+            nav.sheet?.let { sh -> if (sh is Sheet.TxEdit && com.finanplus.ui.screens.usesTxScreen(s, sh)) key(sh) { com.finanplus.ui.screens.TxScreen(s, sh) { nav.sheet = null } } }
         }
-        nav.sheet?.let { sh -> key(sh) { SheetHost(s, sh) { nav.sheet = null } } }
+        nav.sheet?.let { sh -> if (!(sh is Sheet.TxEdit && com.finanplus.ui.screens.usesTxScreen(s, sh))) key(sh) { SheetHost(s, sh) { nav.sheet = null } } }
         ProblemNotice(reaskProblem)
     }
 }
@@ -477,14 +496,12 @@ fun TxRow(t: Tx, s: AppState, onToggle: () -> Unit, onOpen: () -> Unit) {
             Modifier.weight(1f).clickable(role = Role.Button, onClick = open).padding(start = 14.dp, top = 12.dp, bottom = 12.dp, end = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(p.accent2), contentAlignment = Alignment.Center) {
-                // ícone da categoria; sem ícone próprio, mostra a inicial (ex.: "E" de Empréstimo)
-                com.finanplus.ui.components.CategoryGlyph(t.category, p.text)
-            }
+            // ícone da categoria num quadrado na cor do tipo (despesa, receita, meta; previsto = neutro)
+            com.finanplus.ui.components.CategoryTile(com.finanplus.core.TxForm.displayCategory(t.category), com.finanplus.ui.components.txTone(t.kind, t.isGoal, neutral = projected))
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                 Text(t.desc, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 // duas linhas fixas: data e situação nunca são cortadas, mesmo com nomes longos
-                Text("${t.category} · $where", style = MaterialTheme.typography.bodySmall, color = p.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${com.finanplus.core.TxForm.displayCategory(t.category)} · $where", style = MaterialTheme.typography.bodySmall, color = p.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text("$status · $dateLabel", style = MaterialTheme.typography.bodySmall, color = statusColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             // reserva para meta: sem sinal e na cor primária (o dinheiro continua seu, separado na meta);
